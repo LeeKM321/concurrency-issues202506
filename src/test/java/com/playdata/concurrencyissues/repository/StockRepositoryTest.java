@@ -1,6 +1,8 @@
 package com.playdata.concurrencyissues.repository;
 
 import com.playdata.concurrencyissues.entity.Stock;
+import com.playdata.concurrencyissues.service.OptimisticLockFacade;
+import com.playdata.concurrencyissues.service.PessimisticLockStockService;
 import com.playdata.concurrencyissues.service.StockService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -20,6 +22,12 @@ class StockRepositoryTest {
 
     @Autowired
     private StockService stockService;
+
+    @Autowired
+    private PessimisticLockStockService pessimisticLockStockService;
+
+    @Autowired
+    private OptimisticLockFacade optimisticLockFacade;
 
     @Autowired
     private StockRepository stockRepository;
@@ -61,7 +69,7 @@ class StockRepositoryTest {
             // 실행하고자 하는 작업을 스레드에 제출하는 메서드
             executorService.submit(() -> {
                 try {
-                    stockService.decreaseStock(1L, 1L);
+                    optimisticLockFacade.decrease(1L, 1L);
                 } catch (Exception e) {
                     System.out.println("구매 실패: " + e.getMessage());
                 } finally {
@@ -76,6 +84,59 @@ class StockRepositoryTest {
 
         // 100번의 요청 이후 재고를 확인해 보자.
         // 100번의 재고 감소 요청을 넣었으니, 당연히 재고는 0이 아닐까?
+        Stock stock = stockRepository.findById(1L).orElseThrow();
+        assertEquals(0, stock.getQuantity());
+
+
+    }
+
+    @Test
+    @DisplayName("서버 2대 상황 시뮬레이션")
+    void multiServerTest() throws InterruptedException {
+
+        // 서버 A
+        ExecutorService serverA = Executors.newFixedThreadPool(25);
+
+        // 서버 B
+        ExecutorService serverB = Executors.newFixedThreadPool(25);
+
+        CountDownLatch latch = new CountDownLatch(100);
+
+        // 서버 A 고객들
+        for (int i = 0; i < 50; i++) {
+            final int customerId = i;
+            serverA.submit(() -> {
+                try {
+                    System.out.println("서버 A 고객 " + customerId + "주문 시작");
+                    stockService.decreaseStock(1L, 1L);
+                    System.out.println("서버 A 고객 " + customerId + "주문 완료!");
+                } catch (Exception e) {
+                    System.out.println("서버 A 고객 " + customerId + "주문 실패!");
+                } finally {
+                    latch.countDown();
+                }
+            });
+        }
+
+        // 서버 B 고객들
+        for (int i = 0; i < 50; i++) {
+            final int customerId = i;
+            serverB.submit(() -> {
+                try {
+                    System.out.println("서버 B 고객 " + customerId + "주문 시작");
+                    stockService.decreaseStock(1L, 1L);
+                    System.out.println("서버 B 고객 " + customerId + "주문 완료!");
+                } catch (Exception e) {
+                    System.out.println("서버 B 고객 " + customerId + "주문 실패!");
+                } finally {
+                    latch.countDown();
+                }
+            });
+        }
+
+        latch.await();
+
+        // 결과 확인
         Stock stock = stockRepository.findById(1L).orElseThrow();
         assertEquals(0, stock.getQuantity());
 
