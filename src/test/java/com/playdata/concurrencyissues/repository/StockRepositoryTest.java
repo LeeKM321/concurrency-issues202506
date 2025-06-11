@@ -1,6 +1,7 @@
 package com.playdata.concurrencyissues.repository;
 
 import com.playdata.concurrencyissues.entity.Stock;
+import com.playdata.concurrencyissues.service.LettuceLockFacade;
 import com.playdata.concurrencyissues.service.OptimisticLockFacade;
 import com.playdata.concurrencyissues.service.PessimisticLockStockService;
 import com.playdata.concurrencyissues.service.StockService;
@@ -28,6 +29,9 @@ class StockRepositoryTest {
 
     @Autowired
     private OptimisticLockFacade optimisticLockFacade;
+
+    @Autowired
+    private LettuceLockFacade lettuceLockFacade;
 
     @Autowired
     private StockRepository stockRepository;
@@ -69,7 +73,7 @@ class StockRepositoryTest {
             // 실행하고자 하는 작업을 스레드에 제출하는 메서드
             executorService.submit(() -> {
                 try {
-                    optimisticLockFacade.decrease(1L, 1L);
+                    lettuceLockFacade.decrease(1L, 1L);
                 } catch (Exception e) {
                     System.out.println("구매 실패: " + e.getMessage());
                 } finally {

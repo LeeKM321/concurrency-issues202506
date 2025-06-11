@@ -23,9 +23,26 @@ public interface StockRepository extends JpaRepository<Stock, Long> {
     @Query("SELECT s FROM Stock s WHERE s.id = :id")
     Stock findByIdWithPessimisticLock(Long id);
 
+    // 낙관적 락: 데이터에 버전 번호를 붙여서 누군가가 먼저 바꿨는지 확인하는 방법
+    // 데이터 수정 시 버전이 일치하지 않는 경우 -> 예외 발생 -> 수정을 재요청
+    // 낙관적 락 또한 서버가 여러 개여도 문제없이 동작 (DB에 락을 설정)
+    // 비관적 락보다 성능적인 측면에서 이점 (무조건은 x)
     @Lock(LockModeType.OPTIMISTIC)
     @Query("SELECT s FROM Stock s WHERE s.id = :id")
     Stock findByIdWithOptimisticLock(Long id);
+
+    /*
+    낙관적 락 vs 비관적 락
+
+    1. 대부분의 일반적인 상황에서는 낙관적 락 우선시 (응답 속도가 중요할 시, 쿼리 충돌률이 적은 경우, 읽기가 주이고 쓰기가 적은 경우)
+    2. 데이터 정확성이 절대적으로 중요, 충돌이 자주 발생하는 경우에는 비관적 락을 선호
+        충돌률 낮은 경우(조회수 업데이트, 일반 상품 구매 등)
+        충돌률 높은 경우(인기가수 티켓 예매, 선착순 쿠폰 등)
+
+    낙관적 락 & 비관적 락은 DB에 직접 Lock을 거는 방식이기 때문에
+    DB 성능이 떨어진다면 과부하가 발생하고, 장애가 발생할 가능성이 크다...
+    -> 다른 도구(redis)를 이용한 Lock 방식 최근 선호.
+     */
 
 }
 

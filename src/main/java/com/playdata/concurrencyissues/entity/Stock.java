@@ -15,14 +15,14 @@ public class Stock {
     private Long productId;
     private Long quantity;
 
-    @Version
-    private Long version; // 낙관적 락을 위한 버전 정보
-
-    public Stock(Long id, Long productId, Long quantity) {
-        this.id = id;
-        this.productId = productId;
-        this.quantity = quantity;
-    }
+//    @Version
+//    private Long version; // 낙관적 락을 위한 버전 정보
+//
+//    public Stock(Long id, Long productId, Long quantity) {
+//        this.id = id;
+//        this.productId = productId;
+//        this.quantity = quantity;
+//    }
 
     public void decreaseQuantity(Long quantity){
         if (this.quantity - quantity < 0) {
